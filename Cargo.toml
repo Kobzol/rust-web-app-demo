@@ -10,3 +10,17 @@ anyhow = "1.0.81"
 axum = { version = "0.7.5", features = ["macros"] }
 clap = { version = "4.5.4", features = ["derive", "env"] }
 tokio = { version = "1.37.0", features = ["full"] }
+serde = { version = "1.0.197", features = ["derive"] }
+serde_json = "1.0.115"
+tracing = "0.1.40"
+tracing-subscriber = "0.3.18"
+tower-http = { version = "0.5.2", features = ["trace"] }
+chrono = { version = "0.4.37", features = ["serde"] }
+validator = { version = "0.17.0", features = ["derive"] }
+http = "1.1.0"
+mime = "0.3.17"
+tower = "0.4.13"
+axum-valid = { version = "0.17.0", features = ["validator", "json"] }
+
+[dev-dependencies]
+insta = "1.38.0"
