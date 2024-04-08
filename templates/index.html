@@ -1,0 +1,6 @@
+<h1>Subscriber list</h1>
+<ul>
+  {% for subscriber in subscribers %}
+  <li><img src="{{ subscriber.email|gravatar_url }}"/>{{ subscriber.name }} ({{ subscriber.email }})</li>
+  {% endfor %}
+</ul>

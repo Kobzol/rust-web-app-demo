@@ -1,14 +1,9 @@
+use crate::model::SubscriptionExpiration;
+use crate::AppResult;
 use axum::extract::State;
 use axum::Json;
 use axum_valid::Valid;
-use chrono::Utc;
 use sqlx::PgPool;
-
-#[derive(serde::Deserialize, Debug)]
-enum SubscriptionExpiration {
-    Never,
-    At { date: chrono::DateTime<Utc> },
-}
 
 #[derive(serde::Deserialize, validator::Validate, Debug)]
 pub struct SubscriberParams {
@@ -23,7 +18,7 @@ pub struct SubscriberParams {
 pub async fn add_subscriber(
     State(pool): State<PgPool>,
     Valid(Json(params)): Valid<Json<SubscriberParams>>,
-) -> Json<String> {
+) -> AppResult<Json<String>> {
     tracing::info!("Adding subscriber");
 
     sqlx::query!(
@@ -39,10 +34,9 @@ VALUES ($1, $2, $3)
         }
     )
     .execute(&pool)
-    .await
-    .unwrap();
+    .await?;
 
-    Json("ok".to_string())
+    Ok(Json("ok".to_string()))
 }
 
 #[cfg(test)]

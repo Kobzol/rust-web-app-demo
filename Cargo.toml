@@ -24,6 +24,8 @@ axum-valid = { version = "0.17.0", features = ["validator", "json"] }
 toml = "0.8.12"
 secrecy = { version = "0.8.0", features = ["serde"] }
 sqlx = { version = "0.7.4", features = ["postgres", "runtime-tokio", "chrono", "migrate"] }
+askama = "0.12.1"
+gravatar = "0.2.0"
 
 [dev-dependencies]
 insta = "1.38.0"
