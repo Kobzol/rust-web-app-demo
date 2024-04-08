@@ -23,7 +23,7 @@ async fn main() -> anyhow::Result<()> {
     let pool = PgPool::connect(config.db_url()).await?;
     sqlx::migrate!().run(&pool).await?;
 
-    let app = rust_web_app_demo::create_app(pool);
+    let app = rust_web_app_demo::create_app(pool, config);
 
     let listener = tokio::net::TcpListener::bind(format!("127.0.0.1:{port}"))
         .await

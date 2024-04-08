@@ -1,16 +1,20 @@
 #![allow(warnings, unused)]
 
 use axum::body::Body;
+use axum::extract::FromRef;
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
 use axum::Router;
 use chrono::{TimeZone, Utc};
 use http::StatusCode;
 use sqlx::PgPool;
+use std::sync::Arc;
 use tower_http::trace::TraceLayer;
 
+use crate::config::AppConfig;
 use crate::model::{Subscriber, SubscriptionExpiration};
 use crate::routes::index::index_page;
+use crate::routes::send::send_newsletter;
 pub use config::parse_app_config;
 pub use routes::subscribe::add_subscriber;
 
@@ -42,11 +46,35 @@ where
     }
 }
 
-pub fn create_app(pool: PgPool) -> Router {
+#[derive(Clone)]
+struct AppState {
+    db: PgPool,
+    config: Arc<AppConfig>,
+}
+
+impl FromRef<AppState> for PgPool {
+    fn from_ref(input: &AppState) -> Self {
+        input.db.clone()
+    }
+}
+
+impl FromRef<AppState> for Arc<AppConfig> {
+    fn from_ref(input: &AppState) -> Self {
+        input.config.clone()
+    }
+}
+
+pub fn create_app(pool: PgPool, config: AppConfig) -> Router {
+    let state = AppState {
+        db: pool,
+        config: Arc::new(config),
+    };
+
     Router::new()
         .route("/", get(index_page))
         .route("/subscriber", post(add_subscriber))
-        .with_state(pool)
+        .route("/send", post(send_newsletter))
+        .with_state(state)
         .layer(TraceLayer::new_for_http())
 }
 

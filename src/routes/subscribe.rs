@@ -41,6 +41,7 @@ VALUES ($1, $2, $3)
 
 #[cfg(test)]
 mod tests {
+    use crate::config::AppConfig;
     use axum::body::Body;
     use http::header::CONTENT_TYPE;
     use http::{Method, Request, StatusCode};
@@ -52,7 +53,7 @@ mod tests {
 
     #[sqlx::test]
     async fn wrong_email(pool: PgPool) -> anyhow::Result<()> {
-        let app = create_app(pool);
+        let app = create_app(pool, AppConfig::new());
         let response = app
             .oneshot(
                 Request::builder()
@@ -72,7 +73,7 @@ mod tests {
 
     #[sqlx::test]
     async fn insert_subscriber(pool: PgPool) -> anyhow::Result<()> {
-        let app = create_app(pool.clone());
+        let app = create_app(pool.clone(), AppConfig::new());
         let response = app
             .oneshot(
                 Request::builder()
