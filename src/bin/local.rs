@@ -1,7 +1,7 @@
-#![allow(warnings, unused)]
-
 use anyhow::Context;
 use clap::Parser;
+use rust_web_app_demo::parse_app_config;
+use sqlx::PgPool;
 
 #[derive(clap::Parser)]
 struct Args {
@@ -17,7 +17,13 @@ async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
     let port = args.port;
 
-    let app = rust_web_app_demo::create_app();
+    let config = parse_app_config("app-config.toml")?;
+    tracing::info!("App config: {config:?}");
+
+    let pool = PgPool::connect(config.db_url()).await?;
+    sqlx::migrate!().run(&pool).await?;
+
+    let app = rust_web_app_demo::create_app(pool);
 
     let listener = tokio::net::TcpListener::bind(format!("127.0.0.1:{port}"))
         .await

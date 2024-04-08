@@ -1,6 +1,8 @@
+use axum::extract::State;
 use axum::Json;
 use axum_valid::Valid;
 use chrono::Utc;
+use sqlx::PgPool;
 
 #[derive(serde::Deserialize, Debug)]
 enum SubscriptionExpiration {
@@ -18,9 +20,28 @@ pub struct SubscriberParams {
 }
 
 #[tracing::instrument]
-#[axum::debug_handler]
-pub async fn add_subscriber(Valid(Json(params)): Valid<Json<SubscriberParams>>) -> Json<String> {
+pub async fn add_subscriber(
+    State(pool): State<PgPool>,
+    Valid(Json(params)): Valid<Json<SubscriberParams>>,
+) -> Json<String> {
     tracing::info!("Adding subscriber");
+
+    sqlx::query!(
+        r#"
+INSERT INTO subscriber(name, email, expire_at)
+VALUES ($1, $2, $3)
+"#,
+        params.name,
+        params.email,
+        match params.expiration {
+            SubscriptionExpiration::Never => None,
+            SubscriptionExpiration::At { date } => Some(date.naive_utc()),
+        }
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+
     Json("ok".to_string())
 }
 
@@ -35,9 +56,9 @@ mod tests {
 
     use super::*;
 
-    #[tokio::test]
-    async fn wrong_email() -> anyhow::Result<()> {
-        let app = create_app();
+    #[sqlx::test]
+    async fn wrong_email(pool: PgPool) -> anyhow::Result<()> {
+        let app = create_app(pool);
         let response = app
             .oneshot(
                 Request::builder()
@@ -52,6 +73,38 @@ mod tests {
             )
             .await?;
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        Ok(())
+    }
+
+    #[sqlx::test]
+    async fn insert_subscriber(pool: PgPool) -> anyhow::Result<()> {
+        let app = create_app(pool.clone());
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/subscriber")
+                    .method(Method::POST)
+                    .header(CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .body(Body::from(
+                        r#"
+{"name": "Foo bar", "email": "foo@bar.com", "expiration": "Never"}
+"#,
+                    ))?,
+            )
+            .await?;
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let data = sqlx::query!("SELECT name, email, expire_at FROM subscriber")
+            .fetch_one(&pool)
+            .await?;
+        insta::assert_debug_snapshot!(data, @r###"
+        Record {
+            name: "Foo bar",
+            email: "foo@bar.com",
+            expire_at: None,
+        }
+        "###);
+
         Ok(())
     }
 
